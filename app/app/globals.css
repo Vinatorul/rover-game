@@ -1588,14 +1588,6 @@ h1 {
 .course-lines .path-curbs .path-soil {
   stroke: #b19e7c;
 }
-.course-lines .park-trails.path-curbs path {
-  stroke-width: clamp(15px, 1.7vw, 24px);
-  opacity: 0.38;
-}
-.course-lines .park-trails.path-surface path {
-  stroke-width: clamp(11px, 1.35vw, 20px);
-  opacity: 0.82;
-}
 .course-lines .path-markings path {
   stroke-width: 1.5;
   stroke-dasharray: 3 11;
