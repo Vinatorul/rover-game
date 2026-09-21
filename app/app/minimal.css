@@ -1,0 +1,386 @@
+.app-shell {
+  background: none;
+}
+.main-content {
+  max-width: 1800px;
+  padding: 20px;
+}
+.host-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.race-column,
+.race-panel,
+.screen-race {
+  width: 100%;
+}
+.race-panel {
+  border: none;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.host-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+}
+.host-panel.host-empty {
+  padding: 8px 0;
+}
+.host-panel .primary-button {
+  width: auto;
+  min-width: 150px;
+  min-height: 42px;
+  margin: 0;
+  padding-inline: 24px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.host-panel [data-slot='select-trigger'] {
+  width: 108px;
+  height: 42px;
+  border-color: #ffffff18;
+  background: none;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.host-panel .room-invite {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 14px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+.room-invite > strong {
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  margin: 0;
+}
+.room-invite button {
+  width: 38px;
+  height: 40px;
+  padding: 9px;
+}
+.room-invite button svg {
+  width: 16px;
+}
+.host-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.host-panel .screen-link,
+.host-panel .reset-button {
+  width: auto;
+  margin: 0;
+  padding: 11px 10px;
+  border: none;
+  gap: 7px;
+  font-size: 13px;
+}
+.host-panel .reset-button {
+  width: 40px;
+  height: 40px;
+}
+.teams-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 16px;
+}
+.team-card,
+.mode-screen .team-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 4px 0;
+  min-width: 0;
+}
+.team-name {
+  font-size: 14px;
+  color: #d2d8cf;
+}
+.team-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 1px;
+  font-size: 12px;
+  color: #7e8b7f;
+}
+.team-distance {
+  margin-left: auto;
+  font-size: 21px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.team-distance small {
+  font-size: 12px;
+  color: #8e9b8e;
+}
+.screen-scorebar {
+  display: flex;
+  align-items: center;
+  gap: 4%;
+  margin-top: 18px;
+}
+.screen-scorebar .teams-grid {
+  flex: 1;
+  margin: 0;
+}
+.screen-code {
+  color: #a8b4a5;
+  font-size: 20px;
+  letter-spacing: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.mode-screen .main-content {
+  max-width: none;
+}
+.mode-screen .team-count {
+  display: none;
+}
+.join-layout {
+  min-height: calc(100svh - 40px);
+}
+.join-panel {
+  max-width: 320px;
+  padding-bottom: 30px;
+}
+.join-panel label {
+  font-size: 13px;
+  color: #a0aba0;
+}
+.join-panel input {
+  border-color: #ffffff20;
+  background: #192019;
+}
+.join-panel .primary-button {
+  border: none;
+  box-shadow: none;
+  margin-top: 24px;
+}
+.mode-player .main-content {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.player-panel {
+  width: 100%;
+  max-width: 420px;
+  padding: 0;
+}
+.player-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 26px;
+}
+.player-meta .player-team,
+.player-meta .player-room {
+  margin: 0;
+}
+.player-meta .player-team {
+  font-size: 15px;
+}
+.player-meta .player-room {
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+.gas-button {
+  height: clamp(245px, 48svh, 430px);
+  border: none;
+  border-radius: 24px;
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--team) 55%, #101512);
+}
+.gas-button strong,
+.gas-button:disabled strong {
+  font-size: clamp(60px, 15vw, 82px);
+  font-style: normal;
+  letter-spacing: -2px;
+  font-weight: 750;
+  margin: 0;
+}
+.gas-button > span {
+  position: absolute;
+  bottom: 28px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.gas-button:disabled {
+  opacity: 0.6;
+}
+.gas-button.ready:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--team) 55%, #101512);
+}
+.player-distance {
+  margin-top: 29px;
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+}
+.player-distance span {
+  color: #7f8c7f;
+  font-size: 17px;
+}
+.player-progress {
+  margin: 17px 0 0;
+  height: 3px;
+}
+@media (max-width: 820px) {
+  .main-content {
+    padding: 14px;
+  }
+  .teams-grid {
+    gap: 12px;
+  }
+  .team-card {
+    gap: 6px;
+  }
+  .team-name {
+    font-size: 12px;
+  }
+  .team-count {
+    display: none;
+  }
+  .team-distance {
+    font-size: 18px;
+  }
+  .screen-scorebar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 13px;
+  }
+  .screen-code {
+    text-align: center;
+    font-size: 17px;
+  }
+}
+@media (max-width: 540px) {
+  .main-content {
+    padding: 10px;
+  }
+  .host-layout {
+    gap: 18px;
+  }
+  .host-panel {
+    gap: 10px;
+  }
+  .host-panel .room-invite {
+    margin-right: auto;
+  }
+  .host-panel .primary-button {
+    order: 4;
+    width: 100%;
+    min-height: 46px;
+  }
+  .host-panel.host-empty .primary-button {
+    width: auto;
+  }
+  .host-panel [data-slot='select-trigger'] {
+    width: 83px;
+  }
+  .host-panel .screen-link {
+    padding-inline: 3px;
+  }
+  .host-links {
+    gap: 0;
+  }
+  .room-invite > strong {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .team-card,
+  .mode-screen .team-card {
+    display: grid;
+    grid-template-columns: 6px 1fr;
+    gap: 5px;
+  }
+  .team-dot {
+    width: 6px;
+    height: 6px;
+  }
+  .team-name {
+    font-size: 11px;
+  }
+  .team-distance {
+    grid-column: 2;
+    margin-left: 0;
+    font-size: 21px;
+  }
+  .teams-grid {
+    gap: 8px;
+    margin-top: 13px;
+  }
+  .join-layout {
+    width: 100%;
+    min-height: calc(100svh - 48px);
+    justify-content: center;
+  }
+}
+
+.screen-race {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 23vw, 340px);
+  align-items: center;
+  gap: 24px;
+}
+.screen-field {
+  min-width: 0;
+}
+.room-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 10px;
+}
+.room-qr img {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: #fff;
+}
+.room-qr .screen-code {
+  color: #d8dfd5;
+  font-size: 27px;
+  letter-spacing: 5px;
+}
+.joining-status {
+  color: #9ba69a;
+  font-size: 15px;
+}
+@media (max-width: 820px) {
+  .screen-race {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .room-qr {
+    width: 280px;
+    max-width: 100%;
+    margin: 0 auto;
+    gap: 15px;
+  }
+}

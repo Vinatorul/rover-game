@@ -1,0 +1,19 @@
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+PRAGMA busy_timeout = 5000;
+CREATE TABLE IF NOT EXISTS rooms (
+  code TEXT PRIMARY KEY, host TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'lobby',
+  target INTEGER NOT NULL DEFAULT 300, started_at INTEGER, finished_at INTEGER,
+  winner INTEGER, round INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS teams (
+  room TEXT NOT NULL REFERENCES rooms(code), color INTEGER NOT NULL,
+  distance REAL NOT NULL DEFAULT 0, size INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (room, color)
+);
+CREATE TABLE IF NOT EXISTS players (
+  token TEXT PRIMARY KEY, room TEXT NOT NULL REFERENCES rooms(code), name TEXT NOT NULL,
+  team INTEGER NOT NULL, taps INTEGER NOT NULL DEFAULT 0, seq INTEGER NOT NULL DEFAULT 0,
+  last_tap REAL NOT NULL DEFAULT 0, joined_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS players_room_team ON players(room, team);
