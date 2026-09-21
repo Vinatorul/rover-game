@@ -7,13 +7,13 @@ import { Rover } from './race';
 import { Scenery } from './scenery';
 
 const PARK_TRAILS = [
-  { material: 'soil', path: 'M16 22 C8 21 5 16 9 11 C15 3 27 13 36 9 C45 4 52 4 55 10 C56 13 56 16 59 16' },
+  { material: 'soil', path: 'M16 22 C24 22 22 8 32 8 C43 8 47 16 59 16' },
   { material: 'pavers', path: 'M16 78 C8 82 10 92 23 91 C35 90 39 83 52 87 C66 93 81 96 91 86 C99 77 93 66 79 65' },
   { material: 'pavers', path: 'M16 40 C11 40 8 44 8 50 C8 56 11 60 16 60' },
   { material: 'pavers', path: 'M8 50 C6 64 13 72 23 70 C27 69 30 69 34 69' },
-  { material: 'soil', path: 'M9 11 C3 18 3 28 8 33 C10 36 13 40 16 40' },
-  { material: 'soil', path: 'M59 16 C66 11 74 15 76 21 C79 28 75 31 70 31' },
-  { material: 'soil', path: 'M48 69 C42 71 40 77 44 82 C46 85 49 86 52 87' },
+  { material: 'soil', path: 'M16 40 C22 40 22 48 28 48 C32 48 32 41 36 41' },
+  { material: 'soil', path: 'M59 16 C67 16 73 18 77 26 C81 34 82 50 90 50' },
+  { material: 'soil', path: 'M48 69 C54 69 54 81 61 81 C69 81 71 65 79 65' },
 ];
 
 function useTrackAspect() {
