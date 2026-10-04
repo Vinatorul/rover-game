@@ -73,7 +73,7 @@ function PathMaterials({ id, aspect }: { id: string; aspect: number }) {
     <defs>
       {['pavers', 'soil'].map((material) => (
         <pattern key={material} id={`${id}-${material}`} patternUnits="userSpaceOnUse" width={width} height={12}>
-          <image href={`/park-${material}-painted.webp`} width={width} height={12} preserveAspectRatio="none" />
+          <image href={`./park-${material}-painted.webp`} width={width} height={12} preserveAspectRatio="none" />
         </pattern>
       ))}
     </defs>
