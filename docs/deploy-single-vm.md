@@ -23,6 +23,43 @@ cd ~/rover-game
 sudo docker info
 ```
 
+Если проверка Docker завершилась с ошибкой, проверь причину:
+
+```bash
+sudo docker info --format '{{.ServerVersion}}'
+sudo systemctl status docker --no-pager
+```
+
+Если установленная служба Docker остановлена (`inactive`), запусти её и повтори проверку:
+
+```bash
+sudo systemctl start docker
+sudo docker info --format '{{.ServerVersion}}'
+```
+
+Если службы нет или она завершилась с ошибкой, сначала разберись с установкой или её журналом:
+
+```bash
+sudo journalctl -u docker -n 50 --no-pager
+```
+
+Если `docker info` работает без `sudo`, а с `sudo` — нет, проверь `docker context show` и `sudo docker context show`. Docker может быть настроен для твоего пользователя или другого адреса подключения. Этот скрипт запускается от `root`; для него нужен доступ к тому Docker, в котором будет работать игра. Подробнее о причинах — в [документации Docker](https://docs.docker.com/engine/daemon/troubleshoot/).
+
+Если Docker сообщает `client version ... is too new. Maximum supported API version is ...`, клиент обращается к серверу с неподдерживаемой версией API. Для проверки передай поддерживаемую версию через `DOCKER_API_VERSION`. Например, для максимальной версии `1.43`:
+
+```bash
+sudo env DOCKER_API_VERSION=1.43 docker info --format '{{.ServerVersion}}'
+```
+
+Если проверка прошла, передай этот параметр и при деплое:
+
+```bash
+read -r -p 'Публичный IPv4 виртуалки: ' SERVER_IP
+sudo env DOCKER_API_VERSION=1.43 ./scripts/update-vm.sh "$SERVER_IP" --port 8788
+```
+
+Подставь версию из ошибки своего сервера. Параметр действует только для запущенной команды и не меняет настройки службы Docker. Подробнее о согласовании версий — в [документации API Docker](https://docs.docker.com/reference/api/engine/).
+
 Выбери свободный TCP-порт, например `8788`. Проверить, занят ли он:
 
 ```bash

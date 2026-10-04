@@ -77,11 +77,22 @@ configure_arguments() {
   esac
 }
 
+check_docker() {
+  if docker info >/dev/null; then
+    return 0
+  fi
+  printf '%s\n' \
+    'Docker вывел причину ошибки выше. На виртуалке проверь:' \
+    '  sudo docker version' \
+    '  sudo systemctl status docker --no-pager' >&2
+  die "Команда docker info завершилась с ошибкой"
+}
+
 check_requirements() {
   ((EUID == 0)) || die "Запусти скрипт от root"
   command -v docker >/dev/null || die "Установи Docker"
   command -v curl >/dev/null || die "Установи curl"
-  docker info >/dev/null 2>&1 || die "Нет подключения к Docker daemon"
+  check_docker
   [[ -f app/Dockerfile ]] || die "Запусти скрипт из корня репозитория"
 }
 
