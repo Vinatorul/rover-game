@@ -10,8 +10,9 @@ readonly DATA_VOLUME="rover-rally-data"
 readonly BACKUP_DIR="/var/backups/rover-rally"
 readonly CADDY_DIR="/etc/rover-rally"
 readonly CADDY_IMAGE="caddy:2-alpine"
-readonly LOCAL_PORT="8788"
 
+LOCAL_PORT="8788"
+BIND_ADDRESS="127.0.0.1"
 PUBLIC_ORIGIN=""
 TARGET=""
 STANDALONE=false
@@ -19,6 +20,14 @@ STANDALONE=false
 die() {
   printf 'Ошибка: %s\n' "$*" >&2
   exit 1
+}
+
+print_usage() {
+  printf '%s\n' \
+    'Использование: sudo ./scripts/update-vm.sh <домен или IPv4> [--port PORT | --standalone]' \
+    '  --port PORT   HTTP на отдельном внешнем порту (1024–65535), без изменения прокси' \
+    '  без флага     приложение на 127.0.0.1:8788 для существующего прокси' \
+    '  --standalone  отдельный Caddy на портах 80 и 443 для свободной виртуалки'
 }
 
 is_ipv4() {
@@ -41,6 +50,31 @@ configure_target() {
   [[ "$TARGET" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]] ||
     die "Передай домен без схемы и пути или IPv4-адрес"
   PUBLIC_ORIGIN="https://${TARGET}"
+}
+
+configure_port() {
+  [[ "$1" =~ ^[1-9][0-9]{3,4}$ ]] || die "Порт должен быть числом от 1024 до 65535"
+  (( $1 >= 1024 && $1 <= 65535 )) || die "Порт должен быть числом от 1024 до 65535"
+  LOCAL_PORT="$1"
+  BIND_ADDRESS="0.0.0.0"
+  PUBLIC_ORIGIN="http://${TARGET}:${LOCAL_PORT}"
+}
+
+configure_arguments() {
+  (($# >= 1 && $# <= 3)) || die "Посмотри параметры: ./scripts/update-vm.sh --help"
+  configure_target "$1"
+  case "${2:-}" in
+    '') (($# == 1)) || die "Лишние аргументы" ;;
+    --standalone)
+      (($# == 2)) || die "--standalone нельзя сочетать с другими параметрами"
+      STANDALONE=true
+      ;;
+    --port)
+      (($# == 3)) || die "После --port укажи номер порта"
+      configure_port "$3"
+      ;;
+    *) die "Неизвестный аргумент: $2" ;;
+  esac
 }
 
 check_requirements() {
@@ -90,7 +124,7 @@ remove_container() {
 start_app() {
   remove_container "$APP_CONTAINER"
   docker run -d --init --name "$APP_CONTAINER" --restart unless-stopped \
-    --network "$NETWORK_NAME" -p "127.0.0.1:${LOCAL_PORT}:8787" \
+    --network "$NETWORK_NAME" -p "${BIND_ADDRESS}:${LOCAL_PORT}:8787" \
     -e PORT=8787 -e HOST=0.0.0.0 -e DB_PATH=/data/rover.sqlite \
     -v "${DATA_VOLUME}:/data" "$APP_IMAGE" >/dev/null
 }
@@ -120,7 +154,10 @@ check_health() {
 
 print_result() {
   printf '\nПриложение работает: http://127.0.0.1:%s\n' "$LOCAL_PORT"
-  if [[ "$STANDALONE" == true ]]; then
+  if [[ "$BIND_ADDRESS" == "0.0.0.0" ]]; then
+    printf 'Открой игру: %s/?view=host\n' "$PUBLIC_ORIGIN"
+    printf 'Проверь снаружи: curl -fsS %s/health\n' "$PUBLIC_ORIGIN"
+  elif [[ "$STANDALONE" == true ]]; then
     printf 'Caddy запущен для %s. Проверь: curl -fsS %s/health\n' "$PUBLIC_ORIGIN" "$PUBLIC_ORIGIN"
   else
     printf 'Добавь %s в свой reverse proxy. Инструкция: docs/deploy-single-vm.md\n' "$PUBLIC_ORIGIN"
@@ -128,12 +165,11 @@ print_result() {
 }
 
 main() {
-  (($# >= 1 && $# <= 2)) || die "Использование: ./scripts/update-vm.sh <домен или IPv4> [--standalone]"
-  if (($# == 2)); then
-    [[ "$2" == --standalone ]] || die "Неизвестный аргумент: $2"
-    STANDALONE=true
+  if (($# == 1)) && [[ "$1" == --help ]]; then
+    print_usage
+    return
   fi
-  configure_target "$1"
+  configure_arguments "$@"
   check_requirements
   printf '\nСобираю приложение\n'
   docker build -f app/Dockerfile -t "$APP_IMAGE" app
