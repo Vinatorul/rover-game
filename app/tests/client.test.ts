@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { nextTapPacket, syncTapQueue, type TapQueue } from '../lib/client.ts';
+import test, { type TestContext } from 'node:test';
+import { nextTapPacket, request, syncTapQueue, viewLink, type TapQueue } from '../lib/client.ts';
 import type { Room } from '../lib/game.ts';
 
 function room(round = 1, seq = 0): Room {
@@ -20,6 +20,39 @@ function room(round = 1, seq = 0): Room {
 
 function queue(): TapQueue {
   return { key: '', pending: 0, seq: 0, packet: null };
+}
+
+function browserLocation(t: TestContext, pathname: string) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const location = new URL(`https://example.com${pathname}?view=screen&room=OLD123`);
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { location } });
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, 'window', previous);
+    else Reflect.deleteProperty(globalThis, 'window');
+  });
+  return location;
+}
+
+for (const pathname of ['/', '/rover/']) {
+  test(`API requests stay under ${pathname}`, async (t) => {
+    const location = browserLocation(t, pathname);
+    const fetchMock = t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      assert.equal(new URL(String(input), location).href, `https://example.com${pathname}api/rooms/ABC123`);
+      assert.equal(init?.method, 'GET');
+      assert.equal((init?.headers as Record<string, string>).Authorization, 'Bearer player-token');
+      return new Response(JSON.stringify({ room: { code: 'ABC123' } }));
+    });
+    assert.deepEqual(await request('/ABC123', 'player-token'), { room: { code: 'ABC123' } });
+    assert.equal(fetchMock.mock.callCount(), 1);
+  });
+
+  test(`room links keep ${pathname} for every screen`, (t) => {
+    browserLocation(t, pathname);
+    assert.equal(viewLink('host'), `https://example.com${pathname}?view=host`);
+    for (const mode of ['host', 'player', 'screen'] as const) {
+      assert.equal(viewLink(mode, 'ABC123'), `https://example.com${pathname}?view=${mode}&room=ABC123`);
+    }
+  });
 }
 
 test('retry keeps the original packet while later taps wait for their own sequence', () => {

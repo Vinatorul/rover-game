@@ -34,7 +34,7 @@ export class RequestError extends Error {
 }
 
 export async function request<T>(path: string, token = '', body?: unknown): Promise<T> {
-  const response = await fetch(`/api/rooms${path}`, {
+  const response = await fetch(`api/rooms${path}`, {
     method: body ? 'POST' : 'GET',
     cache: 'no-store',
     signal: AbortSignal.timeout(7000),
