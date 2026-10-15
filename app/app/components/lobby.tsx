@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Copy, Monitor, RotateCcw } from 'lucide-react';
+import { Check, Copy, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { viewLink } from '@/lib/client';
@@ -8,10 +8,16 @@ import type { Game } from './use-game';
 export function HostPanel({ game }: { game: Game }) {
   return (
     <aside className={`host-panel ${game.room ? '' : 'host-empty'}`} aria-label="Управление гонкой">
-      {game.room && <RoomInvite game={game} />}
-      {game.room && <DistanceSelect game={game} />}
-      <HostControl game={game} />
-      <HostLinks game={game} />
+      {game.room && (
+        <div className="host-settings">
+          <DistanceSelect game={game} />
+          <RoomInvite game={game} />
+        </div>
+      )}
+      <div className="host-actions">
+        <HostControl game={game} />
+        <StopRace game={game} />
+      </div>
     </aside>
   );
 }
@@ -68,30 +74,24 @@ function HostControl({ game }: { game: Game }) {
   );
 }
 
-function HostLinks({ game }: { game: Game }) {
+function StopRace({ game }: { game: Game }) {
   if (!game.room) return null;
   const canStop = game.identity?.role === 'host' && ['countdown', 'racing'].includes(game.room.status);
+  if (!canStop) return null;
   const stop = () => {
     if (confirm('Остановить заезд и вернуть всех на старт?')) void game.action({ action: 'reset' });
   };
   return (
-    <div className="host-links">
-      <a className="screen-link" target="_blank" rel="noreferrer" href={viewLink('screen', game.code)}>
-        <Monitor size={17} /> Экран
-      </a>
-      {canStop && (
-        <Button
-          variant="ghost"
-          className="reset-button"
-          aria-label="Остановить заезд"
-          title="Остановить заезд"
-          disabled={game.busy}
-          onClick={stop}
-        >
-          <RotateCcw size={17} />
-        </Button>
-      )}
-    </div>
+    <Button
+      variant="ghost"
+      className="reset-button"
+      aria-label="Остановить заезд"
+      title="Остановить заезд"
+      disabled={game.busy}
+      onClick={stop}
+    >
+      <RotateCcw size={17} />
+    </Button>
   );
 }
 
@@ -108,7 +108,6 @@ function RoomInvite({ game }: { game: Game }) {
   };
   return (
     <div className="room-invite">
-      <strong aria-label={`Код комнаты ${game.code}`}>{game.code}</strong>
       <Button
         variant="ghost"
         size="icon"

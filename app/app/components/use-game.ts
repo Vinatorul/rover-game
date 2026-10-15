@@ -34,7 +34,7 @@ function useSession(mode: Mode) {
 }
 
 export function useGame(mode: Mode) {
-  const session = useSession(mode);
+  const session = useSession(mode === 'screen' ? 'host' : mode);
   const snapshot = useSnapshots();
   const [error, setError] = useState('');
   const [connectionError, setConnectionError] = useState('');

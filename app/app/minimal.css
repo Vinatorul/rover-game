@@ -347,6 +347,39 @@
 .screen-field {
   min-width: 0;
 }
+.screen-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.screen-sidebar .host-panel {
+  flex-direction: column;
+  gap: 12px;
+  padding-inline: 10px;
+}
+.host-settings,
+.host-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.screen-sidebar .room-invite {
+  margin: 0;
+}
+.screen-sidebar .host-settings [data-slot='select-trigger'] {
+  flex: 1;
+  width: auto;
+}
+.screen-sidebar .primary-button {
+  flex: 1;
+  order: 0;
+  width: auto;
+  min-width: 0;
+}
+.screen-sidebar .reset-button {
+  flex: none;
+}
 .room-qr {
   display: flex;
   flex-direction: column;
@@ -382,5 +415,10 @@
     max-width: 100%;
     margin: 0 auto;
     gap: 15px;
+  }
+  .screen-sidebar {
+    width: 280px;
+    max-width: 100%;
+    margin-inline: auto;
   }
 }

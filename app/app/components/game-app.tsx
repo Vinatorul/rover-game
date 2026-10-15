@@ -2,24 +2,16 @@ import { WifiOff } from 'lucide-react';
 import type { Mode } from '@/lib/client';
 import { HostPanel } from './lobby';
 import { RoomQr } from './room-qr';
-import { JoinPanel, PlayerPanel } from './player';
+import { PlayerPanel } from './player';
 import { RaceTrack, RacerCards } from './race';
 import { useGame, type Game } from './use-game';
 
 export function GameApp({ mode }: { mode: Mode }) {
   const game = useGame(mode);
   return (
-    <div className={`app-shell mode-${mode}`}>
+    <div className={`app-shell mode-${mode === 'player' ? 'player' : 'screen'}`}>
       <ErrorBanner game={game} />
-      <main className="main-content">
-        {mode === 'host' ? (
-          <HostView game={game} />
-        ) : mode === 'screen' ? (
-          <ScreenView game={game} />
-        ) : (
-          <PlayerPanel game={game} />
-        )}
-      </main>
+      <main className="main-content">{mode === 'player' ? <PlayerPanel game={game} /> : <HostView game={game} />}</main>
     </div>
   );
 }
@@ -45,25 +37,15 @@ function ErrorBanner({ game }: { game: Game }) {
 
 function HostView({ game }: { game: Game }) {
   return (
-    <div className="host-layout">
-      <div className="race-column">
-        <RaceTrack room={game.room} offset={game.offset.current} />
-        {game.room && <RacerCards room={game.room} />}
-      </div>
-      <HostPanel game={game} />
-    </div>
-  );
-}
-
-function ScreenView({ game }: { game: Game }) {
-  if (!game.room) return <JoinPanel mode="screen" game={game} />;
-  return (
     <div className="screen-race">
       <div className="screen-field">
         <RaceTrack room={game.room} offset={game.offset.current} />
-        <RacerCards room={game.room} />
+        {game.room && <RacerCards room={game.room} />}
       </div>
-      <RoomQr code={game.code} />
+      <div className="screen-sidebar">
+        {game.room && <RoomQr code={game.code} />}
+        {(!game.room || game.identity?.role === 'host') && <HostPanel game={game} />}
+      </div>
     </div>
   );
 }
