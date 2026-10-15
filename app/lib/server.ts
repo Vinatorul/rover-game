@@ -1,6 +1,6 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { database } from '../db/index.ts';
-import { RACE_LIMIT, raceStatus } from './game.ts';
+import { RACE_LIMIT, ROVER_COLORS, ROUTE_COUNT, raceStatus } from './game.ts';
 import type { Racer, Room } from './game.ts';
 
 export type StoredRoom = {
@@ -77,5 +77,11 @@ export function snapshot(code: string, token: string): Room {
 }
 
 function racer(player: StoredPlayer): Racer {
-  return { number: player.number, color: (player.number - 1) % 4, distance: player.taps };
+  const seed = createHash('sha256').update(player.token).digest();
+  return {
+    number: player.number,
+    color: seed[1] % ROVER_COLORS.length,
+    route: seed[0] % ROUTE_COUNT,
+    distance: player.taps,
+  };
 }

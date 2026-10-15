@@ -1,0 +1,35 @@
+.player-victory {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: clamp(245px, 48svh, 430px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--team) 45%, transparent);
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 50% 42%, #dfbf8a32, transparent 65%), #202b23;
+}
+
+.player-victory .solo-bouquet {
+  width: min(74%, 290px);
+  height: 86%;
+  filter: drop-shadow(0 12px 18px #0005);
+  transform-origin: center 80%;
+  animation: player-bouquet-arrive 850ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes player-bouquet-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(28%) scale(0.45) rotate(-18deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-victory .solo-bouquet {
+    animation: none;
+  }
+}

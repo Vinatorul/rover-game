@@ -1,11 +1,8 @@
-export function WinnerBouquet() {
+export function RoverOpening() {
   return (
     <div className="solo-celebration" aria-label="Крышка открывается, из ровера вылетает букет невесты">
       <span className="solo-rover-opening" />
       <span className="solo-rover-lid" />
-      <div className="solo-bouquet-flight">
-        <Bouquet />
-      </div>
       <span className="solo-petal solo-petal-one" />
       <span className="solo-petal solo-petal-two" />
       <span className="solo-petal solo-petal-three" />
@@ -13,7 +10,15 @@ export function WinnerBouquet() {
   );
 }
 
-function Bouquet() {
+export function BouquetFlight() {
+  return (
+    <div className="solo-bouquet-flight" role="img" aria-label="Букет невесты">
+      <Bouquet />
+    </div>
+  );
+}
+
+export function Bouquet() {
   return (
     <svg className="solo-bouquet" viewBox="0 0 110 140" aria-hidden="true">
       <g fill="none" stroke="#617d51" strokeWidth="4" strokeLinecap="round">

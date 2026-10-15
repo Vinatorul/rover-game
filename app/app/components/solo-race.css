@@ -11,10 +11,21 @@
   font-size: 12px;
   box-shadow: 0 2px 4px #26352277;
 }
+.solo-course .solo-course-rover .rover-sprite {
+  filter: hue-rotate(var(--rover-hue, 0deg)) drop-shadow(0 1px 1px #0005);
+}
 .solo-course .solo-winner,
 .mode-screen .solo-course .solo-winner {
   width: clamp(82px, 9vw, 125px);
   z-index: 160 !important;
+}
+.solo-finish-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 130;
+  pointer-events: none;
+  background: #08100bcc;
+  animation: solo-finish-dim-in 700ms both ease-out;
 }
 .solo-finish-result {
   position: absolute;
@@ -94,11 +105,13 @@
 }
 .solo-bouquet-flight {
   position: absolute;
-  left: 26%;
-  top: 34%;
-  width: clamp(100px, 12vw, 170px);
-  transform-origin: center 80%;
-  animation: solo-bouquet-toss 2400ms 650ms both cubic-bezier(0.2, 0.7, 0.35, 1);
+  z-index: 170;
+  left: 50%;
+  top: 50%;
+  width: clamp(140px, calc(var(--course-height) * 0.54), 380px);
+  pointer-events: none;
+  transform-origin: center;
+  animation: solo-bouquet-toss 2800ms 650ms both cubic-bezier(0.2, 0.7, 0.35, 1);
 }
 .solo-bouquet {
   width: 100%;
@@ -142,18 +155,26 @@
 @keyframes solo-bouquet-toss {
   0% {
     opacity: 0;
-    transform: translate(-30%, -15%) scale(0.15) rotate(25deg);
+    transform: translate(calc(var(--course-width) * 0.4 - 50%), calc(-50% - 44px)) scale(0.06) rotate(25deg);
   }
   12% {
     opacity: 1;
   }
   58% {
     opacity: 1;
-    transform: translate(-80%, -100%) scale(1) rotate(-28deg);
+    transform: translate(calc(var(--course-width) * 0.1 - 50%), -64%) scale(1.08) rotate(-28deg);
   }
   100% {
     opacity: 1;
-    transform: translate(-105%, -85%) scale(0.92) rotate(-16deg);
+    transform: translate(-50%, -56%) scale(1) rotate(-16deg);
+  }
+}
+@keyframes solo-finish-dim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 @keyframes solo-petal-drift {
@@ -176,7 +197,10 @@
   }
   .solo-course .solo-bouquet-flight {
     animation: none;
-    transform: translate(-105%, -85%) scale(0.92) rotate(-16deg);
+    transform: translate(-50%, -56%) rotate(-16deg);
+  }
+  .solo-finish-dim {
+    animation: none;
   }
   .solo-course .solo-petal {
     display: none;

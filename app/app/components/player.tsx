@@ -16,6 +16,8 @@ import {
 } from '@/lib/client';
 import { ROVER_COLORS, type Room } from '@/lib/game';
 import { useClock, type Game } from './use-game';
+import { Bouquet } from './winner-bouquet';
+import './player-victory.css';
 
 type JoinedRoom = Room & { player: NonNullable<Room['player']> };
 type JoinFields = { code: string; setCode: (value: string) => void };
@@ -196,13 +198,13 @@ export function PlayerPanel({ game }: { game: Game }) {
 
 function gasLabel(room: JoinedRoom, now: number) {
   if (room.status === 'countdown') return String(Math.max(1, Math.ceil(((room.startedAt || now) - now) / 1000)));
-  if (room.status === 'finished')
-    return room.winner === null ? 'Ничья' : room.winner === room.player.number ? 'Победа' : 'Финиш';
+  if (room.status === 'finished') return room.winner === null ? 'Ничья' : 'Финиш';
   return 'ГАЗ';
 }
 
 type GasProps = { room: JoinedRoom; now: number; connected: boolean; tap: () => void; burst: number };
 function GasButton({ room, now, connected, tap, burst }: GasProps) {
+  if (room.status === 'finished' && room.winner === room.player.number) return <PlayerVictory />;
   const racing = room.status === 'racing';
   return (
     <button
@@ -222,5 +224,13 @@ function GasButton({ room, now, connected, tap, burst }: GasProps) {
         </i>
       )}
     </button>
+  );
+}
+
+function PlayerVictory() {
+  return (
+    <div className="player-victory" role="status" aria-label="Ты выиграл букет невесты">
+      <Bouquet />
+    </div>
   );
 }

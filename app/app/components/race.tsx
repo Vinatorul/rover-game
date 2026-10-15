@@ -3,20 +3,25 @@ import { Trophy } from 'lucide-react';
 import { ROVER_COLORS, type Racer, type Room } from '@/lib/game';
 import { useClock } from './use-game';
 import { TrackCourse } from './track-course';
+import { BouquetFlight } from './winner-bouquet';
 import './solo-race.css';
 
 type RoomProps = { room: Room | null };
 
 export function Rover({ color, number, className = '' }: { color: number; number: number; className?: string }) {
+  const paint = ROVER_COLORS[color];
   return (
     <div
       className={`rover-sprite ${className}`}
       role="img"
       aria-label={`Ровер №${number}`}
-      style={{
-        backgroundPosition: `${color % 2 ? 100 : 0}% ${color > 1 ? 100 : 0}%`,
-        clipPath: color > 1 ? 'inset(2.2% 0 0)' : undefined,
-      }}
+      style={
+        {
+          backgroundPosition: `${paint.sprite % 2 ? 100 : 0}% ${paint.sprite > 1 ? 100 : 0}%`,
+          clipPath: paint.sprite > 1 ? 'inset(2.2% 0 0)' : undefined,
+          '--rover-hue': `${paint.hue}deg`,
+        } as CSSProperties
+      }
     />
   );
 }
@@ -42,7 +47,18 @@ function RaceOverlay({ room, now }: RoomProps & { now: number }) {
     );
   }
   if (room?.status !== 'finished') return null;
-  return <FinishResult room={room} />;
+  return <FinishScene room={room} />;
+}
+
+function FinishScene({ room }: { room: Room }) {
+  const winner = room.racers.find((racer) => racer.number === room.winner);
+  return (
+    <>
+      <span className="solo-finish-dim" aria-hidden="true" />
+      {winner && winner.distance >= room.target && <BouquetFlight key={`${room.round}-${winner.number}`} />}
+      <FinishResult room={room} />
+    </>
+  );
 }
 
 function FinishResult({ room }: { room: Room }) {

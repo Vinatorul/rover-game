@@ -14,7 +14,7 @@ function room(round = 1, seq = 0): Room {
     winner: null,
     racers: [],
     serverNow: 10,
-    player: { number: 1, color: 0, distance: 0, taps: 0, seq },
+    player: { number: 1, color: 0, route: 0, distance: 0, taps: 0, seq },
   };
 }
 

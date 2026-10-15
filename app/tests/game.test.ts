@@ -10,7 +10,8 @@ import { createServer as createViteServer } from 'vite';
 import viteConfig from '../vite.config.ts';
 import type { AddressInfo } from 'node:net';
 import type { Room } from '../lib/game.ts';
-import { closeDatabase } from '../db/index.ts';
+import { ROVER_COLORS, ROUTE_COUNT } from '../lib/game.ts';
+import { closeDatabase, database } from '../db/index.ts';
 import { makeServer } from '../server/http.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'rover-game-test-'));
@@ -75,7 +76,8 @@ test('concurrent joins create unique numbered racers and reconnect does not dupl
     state.racers.map((racer) => racer.number),
     Array.from({ length: 40 }, (_, index) => index + 1),
   );
-  assert.ok(state.racers.every((racer) => racer.color >= 0 && racer.color <= 3 && racer.distance === 0));
+  assert.ok(state.racers.every((racer) => racer.color >= 0 && racer.color < ROVER_COLORS.length));
+  assert.ok(state.racers.every((racer) => racer.route >= 0 && racer.route < ROUTE_COUNT && racer.distance === 0));
   assert.equal(new Set(game.players.map((player) => player.token)).size, 40);
   assert.equal(new Set(game.players.map((player) => player.room.player?.number)).size, 40);
   const first = game.players[0];
@@ -85,6 +87,26 @@ test('concurrent joins create unique numbered racers and reconnect does not dupl
   assert.equal('teams' in state, false);
   assert.equal('host' in state, false);
   assert.equal(JSON.stringify(state).includes(first.token), false);
+});
+
+test('fixed identities receive many colors and routes independently of their numbers', async () => {
+  const game = await fixture(0);
+  const code = game.path.split('/').at(-1)!;
+  const insert = database().prepare(
+    'INSERT INTO players (token, room, name, joined_at, number) VALUES (?, ?, ?, ?, ?)',
+  );
+  for (let number = 1; number <= 40; number++) insert.run(`fixture-${number}`, code, 'Игрок', now, number);
+  const racers = (await room(game.path)).racers;
+  assert.deepEqual(
+    [...new Set(racers.map((racer) => racer.color))].sort((a, b) => a - b),
+    [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11],
+  );
+  assert.deepEqual([...new Set(racers.map((racer) => racer.route))].sort(), [0, 1, 2, 3]);
+  assert.equal(racers[0].color, racers[1].color);
+  assert.notEqual(racers[0].route, racers[1].route);
+  assert.equal(racers[0].route, racers[3].route);
+  assert.notEqual(racers[0].color, racers[3].color);
+  assert.equal(JSON.stringify(racers).includes('fixture-'), false);
 });
 
 test('host authorization and countdown prevent early taps or late joins', async () => {
@@ -126,20 +148,32 @@ test('players join without a name and reconnect to the same racer after the star
   assert.equal(rejoined.data.token, first.data.token);
   assert.equal(rejoined.data.room.player?.number, first.data.room.player?.number);
   assert.equal(rejoined.data.room.player?.color, first.data.room.player?.color);
+  assert.equal(rejoined.data.room.player?.route, first.data.room.player?.route);
   assert.equal(rejoined.data.room.racers.length, 2);
 });
 
 test('each tap advances only its own racer, even when racers share a color', async () => {
-  const game = await fixture(11),
+  const game = await fixture(13),
     round = await start(game);
-  assert.equal(game.players[2].room.player?.color, game.players[10].room.player?.color);
-  await tap(game.path, game.players[2].token, 1, round, 1);
-  await tap(game.path, game.players[10].token, 1, round, 8);
+  const [first, second] = playersSharingColor(game.players);
+  await tap(game.path, first.token, 1, round, 1);
+  await tap(game.path, second.token, 1, round, 8);
   const distances = new Map((await room(game.path)).racers.map((racer) => [racer.number, racer.distance]));
-  for (const [index, player] of game.players.entries()) {
-    assert.equal(distances.get(player.room.player!.number), index === 2 ? 1 : index === 10 ? 8 : 0);
+  for (const player of game.players) {
+    assert.equal(distances.get(player.room.player!.number), player === first ? 1 : player === second ? 8 : 0);
   }
 });
+
+function playersSharingColor(players: Reply[]) {
+  const seen = new Map<number, Reply>();
+  for (const player of players) {
+    const color = player.room.player!.color;
+    const existing = seen.get(color);
+    if (existing) return [existing, player];
+    seen.set(color, player);
+  }
+  throw new Error('Expected two racers sharing a color.');
+}
 
 test('duplicate, reordered, and previous-round tap batches never score twice', async () => {
   const game = await fixture(1),
@@ -156,6 +190,7 @@ test('duplicate, reordered, and previous-round tap batches never score twice', a
   assert.equal(reset.player?.taps, 0);
   assert.equal(reset.player?.number, game.players[0].room.player?.number);
   assert.equal(reset.player?.color, game.players[0].room.player?.color);
+  assert.equal(reset.player?.route, game.players[0].room.player?.route);
   assert.ok(reset.racers.every((racer) => racer.distance === 0));
   await start(game);
   assert.equal((await tap(game.path, token, 50, round)).data.accepted, false);
@@ -219,6 +254,7 @@ test('reset keeps existing numbers and new joins receive the next number', async
     const restored = await room(game.path, player.token);
     assert.equal(restored.player?.number, player.room.player?.number);
     assert.equal(restored.player?.color, player.room.player?.color);
+    assert.equal(restored.player?.route, player.room.player?.route);
   }
 });
 
@@ -247,6 +283,7 @@ test('SQLite preserves room, player identity, score, and host permissions when r
   assert.equal(restored.player?.distance, 3);
   assert.equal(restored.player?.number, game.players[0].room.player?.number);
   assert.equal(restored.player?.color, game.players[0].room.player?.color);
+  assert.equal(restored.player?.route, game.players[0].room.player?.route);
   assert.equal(restored.racers.find((racer) => racer.number === game.players[1].room.player?.number)?.distance, 0);
   assert.equal(restored.status, 'racing');
   assert.equal((await request(game.path, { action: 'reset' }, game.host)).data.room.status, 'lobby');

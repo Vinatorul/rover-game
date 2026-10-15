@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { closeDatabase, database } from '../db/index.ts';
+import { snapshot } from '../lib/server.ts';
 
 let directory = '';
 const legacySchema = `
@@ -90,4 +91,18 @@ test('reopening a migrated database preserves the next race and assigned numbers
   assert.deepEqual({ ...room }, { status: 'racing', started_at: 3000, round: 8 });
   const player = restored.prepare("SELECT number, taps, seq, last_tap FROM players WHERE token = 'first'").get();
   assert.deepEqual({ ...player }, { number: 1, taps: 9, seq: 3, last_tap: 4000 });
+});
+
+test('migrated identities keep their colors and routes without changing saved data', () => {
+  const first = snapshot('RACE01', 'first');
+  assert.deepEqual(first.player, { number: 1, color: 3, route: 3, distance: 0, taps: 0, seq: 0 });
+  closeDatabase();
+  assert.deepEqual(snapshot('RACE01', 'first').racers, first.racers);
+  assert.deepEqual(
+    database()
+      .prepare('SELECT token, number FROM players ORDER BY room, number')
+      .all()
+      .map((row) => [row.token, row.number]),
+    expectedNumbers,
+  );
 });
