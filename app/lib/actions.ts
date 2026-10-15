@@ -15,9 +15,8 @@ export function joinRoom(code: string, token: string, body: Body) {
   transaction(() => {
     if (getRoom(code).status !== 'lobby') throw new GameError('Заезд уже начался. Дождись следующего старта.', 409);
     db.prepare(
-      `INSERT INTO players (token, room, name, team, joined_at)
-      SELECT ?, ?, ?, t.color, ? FROM teams t WHERE t.room = ?
-      ORDER BY (SELECT COUNT(*) FROM players p WHERE p.room = t.room AND p.team = t.color), RANDOM() LIMIT 1`,
+      `INSERT INTO players (token, room, name, team, joined_at, number)
+      SELECT ?, ?, ?, 0, ?, COALESCE(MAX(number), 0) + 1 FROM players WHERE room = ?`,
     ).run(identity, code, name, Date.now(), code);
   });
   return { token: identity, room: snapshot(code, identity) };
@@ -28,9 +27,6 @@ function startRace(code: string) {
   if (getRoom(code).status !== 'lobby') throw new GameError('Заезд уже начался.', 409);
   const count = db.prepare('SELECT COUNT(*) AS n FROM players WHERE room = ?').get(code) as { n: number };
   if (!count.n) throw new GameError('Дождись хотя бы одного игрока.');
-  db.prepare(
-    'UPDATE teams SET size = (SELECT COUNT(*) FROM players WHERE room = ? AND team = teams.color) WHERE room = ?',
-  ).run(code, code);
   db.prepare("UPDATE rooms SET status = 'racing', started_at = ? WHERE code = ?").run(Date.now() + 4000, code);
 }
 
@@ -39,7 +35,6 @@ function resetRace(code: string) {
   db.prepare(
     "UPDATE rooms SET status = 'lobby', started_at = NULL, finished_at = NULL, winner = NULL, round = round + 1 WHERE code = ?",
   ).run(code);
-  db.prepare('UPDATE teams SET distance = 0, size = 0 WHERE room = ?').run(code);
   db.prepare('UPDATE players SET taps = 0, seq = 0, last_tap = 0 WHERE room = ?').run(code);
 }
 
@@ -68,16 +63,11 @@ function validateTap(body: Body) {
     throw new GameError('Некорректное нажатие.');
 }
 
-function applyTap(code: string, player: StoredPlayer, room: StoredRoom, body: Body, now: number) {
+function applyTap(player: StoredPlayer, room: StoredRoom, body: Body, now: number) {
   // Keep the 12 taps/second budget in integer units to avoid timestamp rounding.
   const base = Math.max(player.last_tap, room.started_at! * 12, (now - 1000) * 12);
   const credit = Math.min(body.taps!, Math.floor((now * 12 - base) / 1000));
   const db = database();
-  db.prepare('UPDATE teams SET distance = distance + 1.0 * ? / MAX(size, 1) WHERE room = ? AND color = ?').run(
-    credit,
-    code,
-    player.team,
-  );
   db.prepare('UPDATE players SET taps = taps + ?, last_tap = ?, seq = ? WHERE token = ?').run(
     credit,
     base + credit * 1000,
@@ -97,7 +87,7 @@ export function tapRoom(code: string, token: string, body: Body) {
     if (!player) throw new GameError('Сначала присоединись к комнате.', 403);
     if (room.status !== 'racing' || now < room.started_at! || now >= room.started_at! + RACE_LIMIT) return false;
     if (body.round !== room.round || body.seq! <= player.seq) return false;
-    applyTap(code, player, room, body, now);
+    applyTap(player, room, body, now);
     finishRace(code, now);
     return true;
   });

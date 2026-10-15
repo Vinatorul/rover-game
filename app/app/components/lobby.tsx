@@ -40,7 +40,7 @@ function DistanceSelect({ game }: { game: Game }) {
 
 function controlState(game: Game) {
   const { room, busy, identity } = game;
-  const total = room?.teams.reduce((sum, team) => sum + team.size, 0) || 0;
+  const total = room?.racers.length || 0;
   if (!room) return { text: busy ? 'Создаём…' : 'Создать комнату', disabled: busy, action: '' };
   if (room.status === 'lobby')
     return {

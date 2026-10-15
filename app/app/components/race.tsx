@@ -1,20 +1,21 @@
 import type { CSSProperties } from 'react';
-import { Trophy, Users } from 'lucide-react';
-import { TEAM_COLORS, type Room } from '@/lib/game';
+import { Trophy } from 'lucide-react';
+import { ROVER_COLORS, type Racer, type Room } from '@/lib/game';
 import { useClock } from './use-game';
 import { TrackCourse } from './track-course';
+import './solo-race.css';
 
 type RoomProps = { room: Room | null };
 
-export function Rover({ team, className = '' }: { team: number; className?: string }) {
+export function Rover({ color, number, className = '' }: { color: number; number: number; className?: string }) {
   return (
     <div
       className={`rover-sprite ${className}`}
       role="img"
-      aria-label={`Ровер команды «${TEAM_COLORS[team].name}»`}
+      aria-label={`Ровер №${number}`}
       style={{
-        backgroundPosition: `${team % 2 ? 100 : 0}% ${team > 1 ? 100 : 0}%`,
-        clipPath: team > 1 ? 'inset(2.2% 0 0)' : undefined,
+        backgroundPosition: `${color % 2 ? 100 : 0}% ${color > 1 ? 100 : 0}%`,
+        clipPath: color > 1 ? 'inset(2.2% 0 0)' : undefined,
       }}
     />
   );
@@ -40,42 +41,43 @@ function RaceOverlay({ room, now }: RoomProps & { now: number }) {
       </div>
     );
   }
-  if (room?.status === 'finished') return <FinishOverlay room={room} />;
-  return null;
+  if (room?.status !== 'finished') return null;
+  return <FinishResult room={room} />;
 }
 
-function FinishOverlay({ room }: { room: Room }) {
-  const winner = room.winner == null ? null : TEAM_COLORS[room.winner];
+function FinishResult({ room }: { room: Room }) {
+  const winner = room.racers.find((racer) => racer.number === room.winner);
+  const style = { '--winner-color': winner ? ROVER_COLORS[winner.color].color : '#fff6dc' } as CSSProperties;
   return (
-    <div className="track-overlay finish-overlay" aria-label={winner ? `Победители: ${winner.name}` : 'Ничья'}>
-      <Trophy size={36} />
-      <strong style={{ color: winner?.color }}>{winner?.name || 'Ничья'}</strong>
+    <div
+      className="solo-finish-result"
+      role="status"
+      style={style}
+      aria-label={winner ? `Победитель: ровер №${winner.number}` : 'Ничья'}
+    >
+      <Trophy size={24} aria-hidden="true" />
+      <strong>{winner ? `№${winner.number}` : 'Ничья'}</strong>
     </div>
   );
 }
 
-export function TeamCards({ room }: RoomProps) {
+export function RacerCards({ room }: RoomProps) {
+  if (!room?.racers.length) return null;
   return (
-    <div className="teams-grid">
-      {TEAM_COLORS.map((team, index) => (
-        <TeamCard key={team.key} room={room} index={index} />
+    <div className="solo-racers">
+      {room.racers.map((racer) => (
+        <RacerCard key={racer.number} racer={racer} />
       ))}
     </div>
   );
 }
 
-function TeamCard({ room, index }: RoomProps & { index: number }) {
-  const team = TEAM_COLORS[index];
+function RacerCard({ racer }: { racer: Racer }) {
   return (
-    <article className="team-card" style={{ '--team': team.color } as CSSProperties}>
-      <span className="team-dot" />
-      <span className="team-name">{team.name}</span>
-      <span className="team-count" aria-label={`${room?.teams[index]?.size || 0} игроков`}>
-        <Users size={13} />
-        {room?.teams[index]?.size || 0}
-      </span>
-      <strong className="team-distance">
-        {Math.floor(room?.teams[index]?.distance || 0)}
+    <article className="solo-racer-card" style={{ '--team': ROVER_COLORS[racer.color].color } as CSSProperties}>
+      <span className="solo-racer-number">№{racer.number}</span>
+      <strong>
+        {Math.floor(racer.distance)}
         <small> м</small>
       </strong>
     </article>

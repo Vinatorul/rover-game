@@ -48,9 +48,7 @@ async function fixture(count = 4) {
   const created = await request('/api/rooms', {});
   assert.equal(created.status, 201);
   const path = `/api/rooms/${created.data.room.code}`;
-  const replies = await Promise.all(
-    Array.from({ length: count }, (_, index) => request(path, { action: 'join', name: `Игрок ${index}` })),
-  );
+  const replies = await Promise.all(Array.from({ length: count }, () => request(path, { action: 'join' })));
   return { host: created.data.token, path, players: replies.map((reply) => reply.data) };
 }
 
@@ -69,18 +67,22 @@ function tap(path: string, token: string, seq: number, round: number, taps = 3) 
   return request(path, { action: 'tap', taps, seq, round }, token);
 }
 
-test('concurrent joins are balanced, random within least populated teams, and reconnect does not duplicate', async () => {
-  const game = await fixture(25);
+test('concurrent joins create unique numbered racers and reconnect does not duplicate', async () => {
+  const game = await fixture(40);
   const state = await room(game.path);
-  assert.deepEqual(state.teams.map((team) => team.size).sort(), [6, 6, 6, 7]);
-  assert.equal(new Set(game.players.map((player) => player.token)).size, 25);
-  const first = game.players[0];
-  await request(game.path, { action: 'join', name: 'Повтор' }, first.token);
-  assert.equal(
-    (await room(game.path)).teams.reduce((sum, team) => sum + team.size, 0),
-    25,
+  assert.equal(state.racers.length, 40);
+  assert.deepEqual(
+    state.racers.map((racer) => racer.number),
+    Array.from({ length: 40 }, (_, index) => index + 1),
   );
-  assert.equal((await room(game.path, first.token)).player?.team, first.room.player?.team);
+  assert.ok(state.racers.every((racer) => racer.color >= 0 && racer.color <= 3 && racer.distance === 0));
+  assert.equal(new Set(game.players.map((player) => player.token)).size, 40);
+  assert.equal(new Set(game.players.map((player) => player.room.player?.number)).size, 40);
+  const first = game.players[0];
+  await request(game.path, { action: 'join' }, first.token);
+  assert.equal((await room(game.path)).racers.length, 40);
+  assert.equal((await room(game.path, first.token)).player?.number, first.room.player?.number);
+  assert.equal('teams' in state, false);
   assert.equal('host' in state, false);
   assert.equal(JSON.stringify(state).includes(first.token), false);
 });
@@ -110,36 +112,33 @@ test('an empty room cannot start', async () => {
   assert.equal((await room(game.path)).status, 'lobby');
 });
 
-test('players join without a name and reconnect to the same team after the start', async () => {
+test('players join without a name and reconnect to the same racer after the start', async () => {
   const game = await fixture(0);
   const first = await request(game.path, { action: 'join' });
   assert.equal(first.status, 200);
   assert.ok(first.data.token);
   const second = await request(game.path, { action: 'join', name: '' });
   assert.equal(second.status, 200);
-  assert.notEqual(first.data.room.player?.team, second.data.room.player?.team);
+  assert.notEqual(first.data.room.player?.number, second.data.room.player?.number);
   await start(game);
   const rejoined = await request(game.path, { action: 'join' }, first.data.token);
   assert.equal(rejoined.status, 200);
   assert.equal(rejoined.data.token, first.data.token);
-  assert.equal(rejoined.data.room.player?.team, first.data.room.player?.team);
-  assert.equal(
-    rejoined.data.room.teams.reduce((sum, team) => sum + team.size, 0),
-    2,
-  );
+  assert.equal(rejoined.data.room.player?.number, first.data.room.player?.number);
+  assert.equal(rejoined.data.room.player?.color, first.data.room.player?.color);
+  assert.equal(rejoined.data.room.racers.length, 2);
 });
 
-test('equal per-person tapping gives equal team distance for uneven team sizes', async () => {
-  const game = await fixture(5),
+test('each tap advances only its own racer, even when racers share a color', async () => {
+  const game = await fixture(11),
     round = await start(game);
-  const state = await room(game.path);
-  const double = state.teams.find((team) => team.size === 2)!;
-  const single = state.teams.find((team) => team.size === 1)!;
-  const racers = game.players.filter((player) => [double.color, single.color].includes(player.room.player!.team));
-  await Promise.all(racers.map((player) => tap(game.path, player.token, 1, round, 3)));
-  const distances = (await room(game.path)).teams;
-  assert.equal(distances[double.color].distance, 3);
-  assert.equal(distances[single.color].distance, 3);
+  assert.equal(game.players[2].room.player?.color, game.players[10].room.player?.color);
+  await tap(game.path, game.players[2].token, 1, round, 1);
+  await tap(game.path, game.players[10].token, 1, round, 8);
+  const distances = new Map((await room(game.path)).racers.map((racer) => [racer.number, racer.distance]));
+  for (const [index, player] of game.players.entries()) {
+    assert.equal(distances.get(player.room.player!.number), index === 2 ? 1 : index === 10 ? 8 : 0);
+  }
 });
 
 test('duplicate, reordered, and previous-round tap batches never score twice', async () => {
@@ -155,15 +154,17 @@ test('duplicate, reordered, and previous-round tap batches never score twice', a
   assert.equal(reset.round, round + 1);
   assert.equal(reset.player?.seq, 0);
   assert.equal(reset.player?.taps, 0);
-  assert.ok(reset.teams.every((team) => team.distance === 0));
+  assert.equal(reset.player?.number, game.players[0].room.player?.number);
+  assert.equal(reset.player?.color, game.players[0].room.player?.color);
+  assert.ok(reset.racers.every((racer) => racer.distance === 0));
   await start(game);
   assert.equal((await tap(game.path, token, 50, round)).data.accepted, false);
   assert.equal((await tap(game.path, token, 1, round + 1)).data.accepted, true);
   assert.equal((await room(game.path, token)).player?.taps, 3);
 });
 
-test('tap batches are bounded and rapid requests cannot exceed twelve taps per second', async () => {
-  const game = await fixture(1),
+test('tap batches are bounded and each player is limited to twelve taps per second', async () => {
+  const game = await fixture(2),
     token = game.players[0].token,
     round = await start(game);
   assert.equal((await tap(game.path, token, 1, round, 9)).status, 400);
@@ -171,12 +172,14 @@ test('tap batches are bounded and rapid requests cannot exceed twelve taps per s
   await tap(game.path, token, 2, round, 8);
   await tap(game.path, token, 3, round, 8);
   assert.equal((await room(game.path, token)).player?.taps, 12);
+  await tap(game.path, game.players[1].token, 1, round, 8);
+  assert.equal((await room(game.path, game.players[1].token)).player?.taps, 8);
   assert.equal((await tap(game.path, '', 1, round)).status, 403);
 });
 
-test('first team reaching the distance wins and finished races stop scoring', async () => {
-  const game = await fixture(1),
-    token = game.players[0].token;
+test('first racer reaching the distance wins and finished races stop scoring for everyone', async () => {
+  const game = await fixture(7),
+    token = game.players[6].token;
   await request(game.path, { action: 'settings', target: 150 }, game.host);
   const round = await start(game);
   for (let seq = 1; seq <= 19; seq++) {
@@ -185,35 +188,41 @@ test('first team reaching the distance wins and finished races stop scoring', as
   }
   const finished = await room(game.path, token);
   assert.equal(finished.status, 'finished');
-  assert.equal(finished.winner, finished.player?.team);
+  assert.equal(finished.winner, 7);
+  assert.equal(finished.winner, finished.player?.number);
+  assert.equal(finished.player?.distance, 152);
   now += 1000;
   assert.equal((await tap(game.path, token, 20, round, 8)).data.accepted, false);
+  assert.equal((await tap(game.path, game.players[1].token, 1, round, 8)).data.accepted, false);
   assert.equal((await room(game.path, token)).player?.taps, 152);
+  assert.equal((await room(game.path, game.players[1].token)).player?.distance, 0);
 });
 
-test('time limit ends races and never awards an empty team', async () => {
-  const game = await fixture(1);
+test('time limit awards the farthest individual racer', async () => {
+  const game = await fixture(2);
   const round = await start(game);
   await tap(game.path, game.players[0].token, 1, round);
+  await tap(game.path, game.players[1].token, 1, round, 6);
   now += 180000;
-  const finished = await room(game.path, game.players[0].token);
+  const finished = await room(game.path, game.players[1].token);
   assert.equal(finished.status, 'finished');
-  assert.equal(finished.winner, finished.player?.team);
+  assert.equal(finished.winner, finished.player?.number);
 });
 
-test('individual taps preserve fractional distance in teams of two', async () => {
-  const game = await fixture(5),
-    round = await start(game);
-  const state = await room(game.path),
-    double = state.teams.find((team) => team.size === 2)!;
-  const members = game.players.filter((player) => player.room.player!.team === double.color);
-  await tap(game.path, members[0].token, 1, round, 1);
-  assert.equal((await room(game.path)).teams[double.color].distance, 0.5);
-  await tap(game.path, members[1].token, 1, round, 1);
-  assert.equal((await room(game.path)).teams[double.color].distance, 1);
+test('reset keeps existing numbers and new joins receive the next number', async () => {
+  const game = await fixture(5);
+  await start(game);
+  await request(game.path, { action: 'reset' }, game.host);
+  const newcomer = await request(game.path, { action: 'join' });
+  assert.equal(newcomer.data.room.player?.number, 6);
+  for (const player of game.players) {
+    const restored = await room(game.path, player.token);
+    assert.equal(restored.player?.number, player.room.player?.number);
+    assert.equal(restored.player?.color, player.room.player?.color);
+  }
 });
 
-test('timeout produces no winner when nobody tapped or top teams are tied', async () => {
+test('timeout produces no winner when nobody tapped or leading racers are tied', async () => {
   const empty = await fixture(1);
   await start(empty);
   now += 180000;
@@ -228,13 +237,17 @@ test('timeout produces no winner when nobody tapped or top teams are tied', asyn
 });
 
 test('SQLite preserves room, player identity, score, and host permissions when reopened', async () => {
-  const game = await fixture(1),
+  const game = await fixture(2),
     token = game.players[0].token,
     round = await start(game);
   await tap(game.path, token, 1, round);
   closeDatabase();
   const restored = await room(game.path, token);
   assert.equal(restored.player?.taps, 3);
+  assert.equal(restored.player?.distance, 3);
+  assert.equal(restored.player?.number, game.players[0].room.player?.number);
+  assert.equal(restored.player?.color, game.players[0].room.player?.color);
+  assert.equal(restored.racers.find((racer) => racer.number === game.players[1].room.player?.number)?.distance, 0);
   assert.equal(restored.status, 'racing');
   assert.equal((await request(game.path, { action: 'reset' }, game.host)).data.room.status, 'lobby');
 });

@@ -14,7 +14,7 @@ import {
   type RoomResult,
   type TapQueue,
 } from '@/lib/client';
-import { TEAM_COLORS, type Room } from '@/lib/game';
+import { ROVER_COLORS, type Room } from '@/lib/game';
 import { useClock, type Game } from './use-game';
 
 type JoinedRoom = Room & { player: NonNullable<Room['player']> };
@@ -171,13 +171,13 @@ export function PlayerPanel({ game }: { game: Game }) {
   const now = useClock() + game.offset.current;
   if (!game.room?.player) return <JoinPanel mode="player" game={game} />;
   const room = game.room as JoinedRoom;
-  const progress = room.teams[room.player.team]?.distance || 0;
+  const progress = room.player.distance;
   return (
-    <section className="player-panel" style={{ '--team': TEAM_COLORS[room.player.team].color } as CSSProperties}>
+    <section className="player-panel" style={{ '--team': ROVER_COLORS[room.player.color].color } as CSSProperties}>
       <div className="player-meta">
         <span className="player-team">
           <span className="team-dot" />
-          {TEAM_COLORS[room.player.team].name}
+          Ровер №{room.player.number}
         </span>
         <span className="player-room" aria-label={`Код комнаты ${room.code}`}>
           {room.code}
@@ -197,7 +197,7 @@ export function PlayerPanel({ game }: { game: Game }) {
 function gasLabel(room: JoinedRoom, now: number) {
   if (room.status === 'countdown') return String(Math.max(1, Math.ceil(((room.startedAt || now) - now) / 1000)));
   if (room.status === 'finished')
-    return room.winner === null ? 'Ничья' : room.winner === room.player.team ? 'Победа' : 'Финиш';
+    return room.winner === null ? 'Ничья' : room.winner === room.player.number ? 'Победа' : 'Финиш';
   return 'ГАЗ';
 }
 

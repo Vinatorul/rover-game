@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Flag } from 'lucide-react';
-import { TEAM_COLORS, type Room } from '@/lib/game';
+import { ROVER_COLORS, type Racer, type Room } from '@/lib/game';
 import { createTrack, positionOnTrack, TRACK_GOAL, type Track } from '@/lib/track';
 import { sceneDepth } from '@/lib/scenery';
 import { Rover } from './race';
 import { Scenery } from './scenery';
+import { WinnerBouquet } from './winner-bouquet';
 
 const PARK_TRAILS = [
   { material: 'soil', path: 'M16 22 C24 22 22 8 32 8 C43 8 47 16 59 16' },
@@ -18,31 +19,38 @@ const PARK_TRAILS = [
 
 function useTrackAspect() {
   const ref = useRef<HTMLDivElement>(null),
-    [aspect, setAspect] = useState(2);
+    [dimensions, setDimensions] = useState({ aspect: 2, height: 600 });
   useEffect(() => {
     if (!ref.current) return;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      if (height) setAspect(width / height);
+      if (height) setDimensions({ aspect: width / height, height });
     });
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
-  return { ref, aspect };
+  return { ref, ...dimensions };
 }
 
 export function TrackCourse({ room, children }: { room: Room | null; children: React.ReactNode }) {
-  const { ref, aspect } = useTrackAspect();
-  const tracks = useMemo(() => TEAM_COLORS.map((_, index) => createTrack(index, aspect)), [aspect]);
+  const { ref, aspect, height } = useTrackAspect();
+  const tracks = useMemo(() => ROVER_COLORS.map((_, index) => createTrack(index, aspect)), [aspect]);
   return (
-    <div ref={ref} className={`race-track ${room?.status === 'racing' ? 'racing' : ''}`}>
+    <div ref={ref} className={`race-track solo-course ${room?.status === 'racing' ? 'racing' : ''}`}>
       <CourseLines tracks={tracks} aspect={aspect} />
       <span className="course-goal" style={{ left: `${TRACK_GOAL.x}%`, top: `${TRACK_GOAL.y}%` }} aria-label="Финиш">
         <Flag aria-hidden="true" />
       </span>
       <Scenery />
-      {tracks.map((track, index) => (
-        <CourseRover key={index} track={track} room={room} index={index} />
+      {room?.racers.map((racer) => (
+        <CourseRover
+          key={`${room.round}-${racer.number}`}
+          track={tracks[(racer.number - 1) % 4]}
+          room={room}
+          racer={racer}
+          aspect={aspect}
+          height={height}
+        />
       ))}
       {children}
     </div>
@@ -115,25 +123,45 @@ function ParkTrails({ id, surface = false }: { id: string; surface?: boolean }) 
   );
 }
 
-function CourseRover({ track, room, index }: { track: Track; room: Room | null; index: number }) {
-  const progress = (room?.teams[index]?.distance || 0) / (room?.target || 300);
-  const position = positionOnTrack(track, progress),
-    color = TEAM_COLORS[index].color;
+function roverPosition(track: Track, room: Room, racer: Racer, aspect: number, height: number) {
+  const progress = racer.distance / room.target;
+  const position = positionOnTrack(track, progress);
+  const group = room.racers.filter((other) => (other.number - racer.number) % 4 === 0);
+  const slot = group.findIndex((other) => other.number === racer.number);
+  const staging = Math.max(0, 1 - progress / 0.09);
+  const nearby = group.filter((other) => Math.abs(other.distance - racer.distance) < room.target * 0.035);
+  const rank = nearby.findIndex((other) => other.number === racer.number) - (nearby.length - 1) / 2;
+  const spread = rank * (2200 / height) * (1 - staging) * Math.max(0, Math.min(1, (1 - progress) / 0.02));
+  const next = positionOnTrack(track, Math.min(1, progress + 0.002));
+  const dx = (next.x - position.x) * aspect,
+    dy = next.y - position.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return {
+    x: position.x + (group.length > 1 ? -7.5 + (slot % 2) * 4.8 : -3) * staging - (dy / length / aspect) * spread,
+    y:
+      position.y +
+      (Math.floor(slot / 2) - (Math.ceil(group.length / 2) - 1) / 2) * 4.8 * staging +
+      (dx / length) * spread,
+  };
+}
+
+type CourseRoverProps = { track: Track; room: Room; racer: Racer; aspect: number; height: number };
+function CourseRover({ track, room, racer, aspect, height }: CourseRoverProps) {
+  const position = roverPosition(track, room, racer, aspect, height);
+  const winner = room.status === 'finished' && room.winner === racer.number && racer.distance >= room.target;
+  const style = {
+    left: `${position.x}%`,
+    top: `${position.y}%`,
+    zIndex: sceneDepth(position.y),
+    '--team': ROVER_COLORS[racer.color].color,
+    '--rover-size': `${room.racers.length > 16 ? 3.8 : room.racers.length > 8 ? 4.8 : 6}vw`,
+  } as CSSProperties;
   return (
-    <div
-      className="course-rover"
-      style={
-        {
-          left: `${position.x}%`,
-          top: `${position.y}%`,
-          zIndex: sceneDepth(position.y),
-          '--team': color,
-        } as CSSProperties
-      }
-    >
+    <div className={`course-rover solo-course-rover ${winner ? 'solo-winner' : ''}`} style={style}>
       <span className="rover-shadow" />
-      <Rover team={index} />
-      <span className="racer-badge">{index + 1}</span>
+      <Rover color={racer.color} number={racer.number} />
+      <span className="racer-badge">{racer.number}</span>
+      {winner && <WinnerBouquet />}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { Mode } from '@/lib/client';
 import { HostPanel } from './lobby';
 import { RoomQr } from './room-qr';
 import { JoinPanel, PlayerPanel } from './player';
-import { RaceTrack, TeamCards } from './race';
+import { RaceTrack, RacerCards } from './race';
 import { useGame, type Game } from './use-game';
 
 export function GameApp({ mode }: { mode: Mode }) {
@@ -48,7 +48,7 @@ function HostView({ game }: { game: Game }) {
     <div className="host-layout">
       <div className="race-column">
         <RaceTrack room={game.room} offset={game.offset.current} />
-        {game.room && <TeamCards room={game.room} />}
+        {game.room && <RacerCards room={game.room} />}
       </div>
       <HostPanel game={game} />
     </div>
@@ -61,7 +61,7 @@ function ScreenView({ game }: { game: Game }) {
     <div className="screen-race">
       <div className="screen-field">
         <RaceTrack room={game.room} offset={game.offset.current} />
-        <TeamCards room={game.room} />
+        <RacerCards room={game.room} />
       </div>
       <RoomQr code={game.code} />
     </div>
